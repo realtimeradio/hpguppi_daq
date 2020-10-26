@@ -67,9 +67,11 @@ function init() {
   then
     echo "Invalid instance number '${instance:-[unspecified]}' (ignored)"
     return 1
-  elif [ "${dir}" == "/buf0" ]
+  #elif [ "${dir}" == "/buf0" ]
+  elif [ "${dir%/buf?}" != "${dir}" ]
   then
     # Don't want to output messages to NVMe directory
+    echo "setting workdir to /tmp"
     workdir=/tmp
   fi
 
@@ -181,6 +183,20 @@ then
   instances[0]="${instances[0]/datax/buf0}"
   instances[1]="${instances[1]/datax2/buf1}"
   # For initial testing...
+  out_thread=null_output_thread
+  #out_thread=hpguppi_rawdisk_only_thread
+  shift
+elif [ "$1" = 'atasnap' ]
+then
+  use_fifo=no
+  net_thread="hpguppi_ibvpkt_thread -c 11 hpguppi_atasnap_voltage_thread"
+  options="-o IBVPKTSZ=42,8,8192"
+  instances[0]="${instances[0]/eth4/enp134s0d1}"
+  bindport=4015
+  instances[0]="${instances[0]/datax/mnt/buf0}"
+  instances[1]="${instances[1]/datax2/mnt/buf1}"
+  # For initial testing...
+  hpguppi_plugin=/homelocal/sonata/davidm/src/hpguppi_daq/src/.libs/hpguppi_daq.so
   out_thread=null_output_thread
   #out_thread=hpguppi_rawdisk_only_thread
   shift
