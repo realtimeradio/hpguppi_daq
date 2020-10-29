@@ -32,6 +32,9 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
+#include <net/if.h>
+#include <sys/ioctl.h>
+
 #include "hashpipe.h"
 #include "hpguppi_databuf.h"
 #include "hpguppi_time.h"
@@ -460,6 +463,29 @@ enum run_states check_start_stop(hashpipe_status_t *st, uint64_t pktidx)
   return retval;
 }
 
+void fill_if_mac(char *if_name, unsigned char *dst_mac){
+	//https://www.stev.org/post/clinuxgetmacaddressfrominterface
+	int sock = socket(PF_INET, SOCK_DGRAM, 0);
+	struct ifreq req;
+	int i = 0;
+
+	if (sock < 0) {
+		perror("socket");
+		exit(EXIT_FAILURE);
+	}
+
+	memset(&req, 0, sizeof(req));
+  strncpy(req.ifr_name, if_name, IF_NAMESIZE - 1);
+
+	if (ioctl(sock, SIOCGIFHWADDR, &req) < 0) {
+		perror("ioctl");
+		exit(EXIT_FAILURE);
+	}
+
+	for(i=0;i<6;i++)
+		dst_mac[i] = req.ifr_hwaddr.sa_data[i];
+}
+
 // This thread's init() function, if provided, is called by the Hashpipe
 // framework at startup to allow the thread to perform initialization tasks
 // such as setting up network connections or GPU devices.
@@ -584,6 +610,9 @@ int debug_i=0, debug_j=0;
   char dest_ip_stream_str[80] = {};
   char dest_ip_stream_str_new[80] = {};
   char * pchar;
+  // Host's Interface and MAC
+  char host_if_str[IF_NAMESIZE] = {};
+  uint8_t dest_mac[6];
   // Numeric form of dest_ip
   struct in_addr dest_ip;
   int dest_idx;
@@ -606,8 +635,15 @@ int debug_i=0, debug_j=0;
     hgetu4(st->buf, "BINDPORT", &port);
     // Store bind port in status buffer (in case it was not there before).
     hputu4(st->buf, "BINDPORT", port);
+    // Get Bind Host Interface
+    hgets(st->buf, "BINDHOST", sizeof (host_if_str), host_if_str);
   }
   hashpipe_status_unlock_safe(st);
+
+  // Capture Interface MAC
+  fill_if_mac(host_if_str, dest_mac);
+  hashpipe_info(thread_name, "MAC of interface %s is %.2X:%.2X:%.2X:%.2X:%.2X:%.2X",
+                host_if_str, dest_mac[0], dest_mac[1], dest_mac[2], dest_mac[3], dest_mac[4], dest_mac[5]);
 
   // Make sure we got a non-zero max_flows
   if(max_flows == 0) {
@@ -928,7 +964,7 @@ int debug_i=0, debug_j=0;
               // If switching to "0.0.0.0"
               if(dest_ip.s_addr == INADDR_ANY) {
                 // Remove all flows
-                hashpipe_info(thread_name, "dest_ip %s (removing %d flows)",
+                hashpipe_info(thread_name, "dest_ip %s (removing %d flows)\nDESTIP 0.0.0.0 is not applicable.",
                     dest_ip_stream_str_new, nstreams);
                 for(dest_idx=0; dest_idx < nstreams; dest_idx++) {
                   if(hpguppi_ibvpkt_flow(dbin, dest_idx, IBV_FLOW_SPEC_UDP,
@@ -954,15 +990,13 @@ int debug_i=0, debug_j=0;
                     dest_ip_stream_str_new, pchar ? pchar+1 : "0");
                 hashpipe_info(thread_name, "adding %d flows", nstreams);
                 for(dest_idx=0; dest_idx < nstreams; dest_idx++) {
+                  errno = 0;
                   if(hpguppi_ibvpkt_flow(dbin, dest_idx, IBV_FLOW_SPEC_UDP,
                         //hibv_ctx->mac, NULL, 0, 0,
-                        NULL, NULL, 0, 0,
+                        dest_mac, NULL, 0, 0,
                         0, ntohl(dest_ip.s_addr)+dest_idx, 0, port))
                   {
                     hashpipe_error(thread_name, "hashpipe_ibv_flow error");
-		    hashpipe_error(thread_name, "%08x %d, destid: %d,"
-				    "nstreams: %d", ntohl(dest_ip.s_addr)+dest_idx, port, 
-				    dest_idx, nstreams);
                     break;
                   }
                 }
