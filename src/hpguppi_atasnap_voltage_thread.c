@@ -960,6 +960,9 @@ int debug_i=0, debug_j=0;
                         0, ntohl(dest_ip.s_addr)+dest_idx, 0, port))
                   {
                     hashpipe_error(thread_name, "hashpipe_ibv_flow error");
+                    hashpipe_error(thread_name, "%08x %d, destid: %d,"
+                        "nstreams: %d", ntohl(dest_ip.s_addr)+dest_idx, port, 
+                        dest_idx, nstreams);
                     break;
                   }
                 }
