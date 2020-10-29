@@ -928,7 +928,7 @@ int debug_i=0, debug_j=0;
               // If switching to "0.0.0.0"
               if(dest_ip.s_addr == INADDR_ANY) {
                 // Remove all flows
-                hashpipe_info(thread_name, "dest_ip %s (removing %d flows)",
+                hashpipe_info(thread_name, "dest_ip %s (removing %d flows)\nDESTIP 0.0.0.0 is not applicable.",
                     dest_ip_stream_str_new, nstreams);
                 for(dest_idx=0; dest_idx < nstreams; dest_idx++) {
                   if(hpguppi_ibvpkt_flow(dbin, dest_idx, IBV_FLOW_SPEC_UDP,
@@ -960,9 +960,9 @@ int debug_i=0, debug_j=0;
                         0, ntohl(dest_ip.s_addr)+dest_idx, 0, port))
                   {
                     hashpipe_error(thread_name, "hashpipe_ibv_flow error");
-		    hashpipe_error(thread_name, "%08x %d, destid: %d,"
-				    "nstreams: %d", ntohl(dest_ip.s_addr)+dest_idx, port, 
-				    dest_idx, nstreams);
+                    hashpipe_error(thread_name, "%08x %d, destid: %d,"
+                        "nstreams: %d", ntohl(dest_ip.s_addr)+dest_idx, port, 
+                        dest_idx, nstreams);
                     break;
                   }
                 }
