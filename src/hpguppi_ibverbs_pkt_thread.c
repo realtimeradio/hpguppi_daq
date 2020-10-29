@@ -313,10 +313,15 @@ hpguppi_ibvpkt_flow(
     uint16_t  src_port,   uint16_t  dst_port)
 {
   struct hashpipe_ibv_context * hibv_ctx = hashpipe_ibv_context_ptr(db);
+  
+  if(!dst_mac)
+    fprintf(stderr, "Destination MAC cannot be NULL. "// causes EINVAL [Invalid Argument]
+            "Providing hibv_ctx->mac: %.2X:%.2X:%.2X:%.2X:%.2X:%.2X\n",
+            hibv_ctx->mac[0], hibv_ctx->mac[1], hibv_ctx->mac[2], hibv_ctx->mac[3], hibv_ctx->mac[4], hibv_ctx->mac[5]);
 
   return hashpipe_ibv_flow(hibv_ctx,
     flow_idx,   flow_type,
-    dst_mac,    src_mac,
+    (dst_mac ? dst_mac : hibv_ctx->mac),    src_mac,
     ether_type, vlan_tag,
     src_ip,     dst_ip,
     src_port,   dst_port);

@@ -954,9 +954,8 @@ int debug_i=0, debug_j=0;
                     dest_ip_stream_str_new, pchar ? pchar+1 : "0");
                 hashpipe_info(thread_name, "adding %d flows", nstreams);
                 for(dest_idx=0; dest_idx < nstreams; dest_idx++) {
-                  errno = 0;
                   if(hpguppi_ibvpkt_flow(dbin, dest_idx, IBV_FLOW_SPEC_UDP,
-                        // hibv_ctx->mac, NULL, 0, 0,
+                        //hibv_ctx->mac, NULL, 0, 0,
                         NULL, NULL, 0, 0,
                         0, ntohl(dest_ip.s_addr)+dest_idx, 0, port))
                   {
